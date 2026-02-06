@@ -1,0 +1,6 @@
+Med Name,NDC,Exp Date,Qty,Available,Patient ID,Lot Number,Storage Temp,Notes
+Lisinopril 10mg Tablet,0781-1506-01,2025-12-31,100,100,P12345,LOT-2024-001,Room Temp,Initial stock
+Metformin 500mg Tablet,0093-7214-01,2025-10-15,200,180,P12346,LOT-2024-002,Room Temp,Partial usage
+Amlodipine 5mg Tablet,0093-7367-01,2025-09-30,150,150,P12347,LOT-2024-003,Fridge,Temperature sensitive
+Atorvastatin 20mg Tablet,0093-5056-01,2026-03-20,80,75,P12348,LOT-2024-004,Room Temp,Good condition
+Omeprazole 20mg Capsule,0093-5056-56,2025-11-11,120,100,P12349,LOT-2024-005,Room Temp,Check expiry
