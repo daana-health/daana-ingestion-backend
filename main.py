@@ -109,20 +109,20 @@ async def convert_csv(
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
         
         # Convert the CSV
-        cleaned_csv, column_mapping, unmapped_columns = await converter.smart_convert_csv(
+        cleaned_csv, column_mapping, unmapped_columns, effective_table = await converter.smart_convert_csv(
             file_content=file_content,
             target_table=target_table
         )
-        
-        logger.info(f"Conversion successful. Mapped {len(column_mapping)} columns, "
-                   f"{len(unmapped_columns)} unmapped")
-        
+
+        logger.info(f"Conversion successful for table '{effective_table}'. "
+                   f"Mapped {len(column_mapping)} columns, {len(unmapped_columns)} unmapped")
+
         # Return metadata if requested
         if return_metadata:
             return JSONResponse(content={
                 "success": True,
                 "original_filename": file.filename,
-                "target_table": target_table,
+                "target_table": effective_table,
                 "column_mapping": column_mapping,
                 "unmapped_columns": unmapped_columns,
                 "mapped_count": len(column_mapping),
@@ -246,33 +246,11 @@ async def ingest_csv(
         if len(file_content) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-        # Step 1: Convert CSV using existing converter
-        cleaned_csv, column_mapping, unmapped_columns = await converter.smart_convert_csv(
+        # Step 1: Convert + parse CSV using intelligent two-phase converter
+        cleaned_csv, column_mapping, unmapped_columns, effective_table = await converter.smart_convert_csv(
             file_content=file_content,
             target_table=target_table
         )
-
-        # Determine effective target table
-        effective_table = target_table
-        if not effective_table:
-            # Infer from mapped columns
-            from schema import TARGET_SCHEMA
-            best_table = None
-            best_count = 0
-            mapped_cols = set(column_mapping.values())
-            for tbl, info in TARGET_SCHEMA.items():
-                schema_cols = {c["name"] for c in info["columns"]}
-                overlap = len(mapped_cols & schema_cols)
-                if overlap > best_count:
-                    best_count = overlap
-                    best_table = tbl
-            effective_table = best_table
-
-        if not effective_table:
-            raise HTTPException(
-                status_code=400,
-                detail="Could not determine target table. Please specify target_table."
-            )
 
         # Step 2: Parse cleaned CSV into DataFrame
         cleaned_df = pd.read_csv(StringIO(cleaned_csv))
