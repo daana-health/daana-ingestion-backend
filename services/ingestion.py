@@ -149,6 +149,29 @@ def _prepare_record(
     if table in ("lots", "locations", "units", "transactions"):
         record["clinic_id"] = clinic_id
 
+    if table == "lots":
+        # Resolve location_id from helper columns (location_name or location_temp)
+        if "location_id" not in record:
+            location_id = _resolve_location_id(
+                supabase,
+                record.get("location_name", ""),
+                record.get("location_temp", ""),
+                clinic_id,
+            )
+            if location_id:
+                record["location_id"] = location_id
+            else:
+                logger.warning(
+                    f"Could not resolve location for lot "
+                    f"(name={record.get('location_name')!r}, "
+                    f"temp={record.get('location_temp')!r})"
+                )
+
+        # Remove helper columns not in the lots table schema
+        helper_cols = {h["name"] for h in HELPER_COLUMNS.get(table, [])}
+        for extra_col in helper_cols:
+            record.pop(extra_col, None)
+
     if table == "units":
         record["user_id"] = user_id
         record["date_created"] = datetime.now(timezone.utc).isoformat()
@@ -226,6 +249,63 @@ def _resolve_drug_id(supabase, record: dict) -> str | None:
     result = query.limit(1).execute()
     if result.data:
         return result.data[0]["drug_id"]
+    return None
+
+
+def _resolve_location_id(
+    supabase, location_name: str, location_temp: str, clinic_id: str
+) -> str | None:
+    """Look up location by name or temp + clinic_id, return location_id or None."""
+    # Try by name first (most specific)
+    if location_name:
+        result = (
+            supabase.table("locations")
+            .select("location_id")
+            .ilike("name", location_name)
+            .eq("clinic_id", clinic_id)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]["location_id"]
+
+    # Fall back to matching by temperature
+    if location_temp:
+        # Normalize common temperature values
+        temp_lower = location_temp.strip().lower()
+        if temp_lower in ("fridge", "cold", "refrigerated", "refrigerator"):
+            temp_value = "fridge"
+        elif temp_lower in ("room temp", "room temperature", "rt", "ambient", "room"):
+            temp_value = "room temp"
+        else:
+            temp_value = location_temp.strip()
+
+        result = (
+            supabase.table("locations")
+            .select("location_id")
+            .ilike("temp", temp_value)
+            .eq("clinic_id", clinic_id)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]["location_id"]
+
+    # Last resort: return the first location for this clinic
+    result = (
+        supabase.table("locations")
+        .select("location_id")
+        .eq("clinic_id", clinic_id)
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        logger.info(
+            f"Using default location for clinic {clinic_id} "
+            f"(no name/temp match found)"
+        )
+        return result.data[0]["location_id"]
+
     return None
 
 

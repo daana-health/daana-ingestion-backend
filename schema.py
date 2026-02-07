@@ -44,7 +44,7 @@ TARGET_SCHEMA = {
     "lots": {
         "columns": [
             {"name": "lot_id", "type": "UUID", "description": "Primary key for lot", "auto": True},
-            {"name": "source", "type": "VARCHAR(255)", "description": "Source/donation origin of the lot", "nullable": True},
+            {"name": "source", "type": "VARCHAR(255)", "description": "Drawer code for the lot (2-letter code, e.g. AL=Drawer A Left, CR=Drawer C Right)", "nullable": True},
             {"name": "note", "type": "TEXT", "description": "Additional notes about the lot", "nullable": True},
             {"name": "date_created", "type": "TIMESTAMPTZ", "description": "Lot creation date", "auto": True},
             {"name": "location_id", "type": "UUID", "description": "Foreign key to locations"},
@@ -100,6 +100,10 @@ TARGET_SCHEMA = {
 # Helper columns that aren't in the target table but are accepted in CSV data
 # to help resolve foreign keys during ingestion.
 HELPER_COLUMNS = {
+    "lots": [
+        {"name": "location_name", "resolves": "location_id", "description": "Location name used to look up location_id"},
+        {"name": "location_temp", "resolves": "location_id", "description": "Storage temperature (fridge/room temp) used to look up location_id"},
+    ],
     "units": [
         {"name": "medication_name", "resolves": "drug_id", "description": "Drug name used to look up drug_id"},
         {"name": "generic_name", "resolves": "drug_id", "description": "Generic drug name used to look up drug_id"},
@@ -107,7 +111,7 @@ HELPER_COLUMNS = {
         {"name": "strength_unit", "resolves": "drug_id", "description": "Strength unit used to look up drug_id"},
         {"name": "form", "resolves": "drug_id", "description": "Drug form used to look up drug_id"},
         {"name": "ndc_id", "resolves": "drug_id", "description": "NDC code used to look up drug_id"},
-        {"name": "lot_source", "resolves": "lot_id", "description": "Lot source/origin name used to look up lot_id"},
+        {"name": "lot_source", "resolves": "lot_id", "description": "Lot drawer code (e.g. AL, CR) used to look up lot_id"},
     ],
 }
 
