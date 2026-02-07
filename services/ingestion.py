@@ -7,13 +7,14 @@ import uuid
 from datetime import datetime, timezone
 import pandas as pd
 from utils.supabase import get_supabase_server
+from schema import TARGET_SCHEMA, HELPER_COLUMNS
 
 logger = logging.getLogger(__name__)
 
 # Deduplication rules: columns that form the unique composite key per table
 DEDUP_KEYS = {
     "drugs": ["medication_name", "strength", "strength_unit", "form"],
-    "lots": ["lot_code", "clinic_id"],
+    "lots": ["source", "location_id", "clinic_id"],
     "locations": ["name", "clinic_id"],
     "units": [
         "drug_id",
@@ -118,7 +119,7 @@ def _case_insensitive_cols(table: str) -> set:
         "form",
         "name",
         "email",
-        "lot_code",
+        "source",
     }
 
 
@@ -163,21 +164,23 @@ def _prepare_record(
                 )
                 return None
 
-        # Resolve lot_id from lot_code + clinic_id
-        if "lot_id" not in record and "lot_code" in record:
+        # Resolve lot_id from lot_source + clinic_id
+        if "lot_id" not in record and "lot_source" in record:
             lot_id = _resolve_lot_id(
-                supabase, record.get("lot_code", ""), clinic_id
+                supabase, record.get("lot_source", ""), clinic_id
             )
             if lot_id:
                 record["lot_id"] = lot_id
             else:
                 logger.warning(
-                    f"Could not resolve lot for code: {record.get('lot_code')}"
+                    f"Could not resolve lot for source: {record.get('lot_source')}"
                 )
-                return None
 
-        # Remove intermediate columns not in the units schema
-        for extra_col in ("medication_name", "strength", "strength_unit", "form", "lot_code", "generic_name"):
+        # Remove helper columns not in the units table schema
+        helper_cols = set()
+        for h in HELPER_COLUMNS.get(table, []):
+            helper_cols.add(h["name"])
+        for extra_col in helper_cols:
             record.pop(extra_col, None)
 
     if table == "transactions":
@@ -194,6 +197,17 @@ def _prepare_record(
     if table == "lots":
         if "date_created" not in record:
             record["date_created"] = now_iso
+
+    # Safety net: strip any columns that don't exist in the actual DB table.
+    # This prevents errors from hallucinated or stale column names.
+    valid_db_cols = _get_valid_db_columns(table)
+    if valid_db_cols:
+        invalid_cols = [k for k in record if k not in valid_db_cols]
+        for col in invalid_cols:
+            logger.warning(
+                f"Stripping invalid column '{col}' before insert into '{table}'"
+            )
+            del record[col]
 
     return record
 
@@ -215,12 +229,14 @@ def _resolve_drug_id(supabase, record: dict) -> str | None:
     return None
 
 
-def _resolve_lot_id(supabase, lot_code: str, clinic_id: str) -> str | None:
-    """Look up lot by lot_code + clinic_id, return lot_id or None."""
+def _resolve_lot_id(supabase, lot_source: str, clinic_id: str) -> str | None:
+    """Look up lot by source + clinic_id, return lot_id or None."""
+    if not lot_source:
+        return None
     result = (
         supabase.table("lots")
         .select("lot_id")
-        .ilike("lot_code", lot_code)
+        .ilike("source", lot_source)
         .eq("clinic_id", clinic_id)
         .limit(1)
         .execute()
@@ -228,3 +244,10 @@ def _resolve_lot_id(supabase, lot_code: str, clinic_id: str) -> str | None:
     if result.data:
         return result.data[0]["lot_id"]
     return None
+
+
+def _get_valid_db_columns(table: str) -> set:
+    """Get the set of actual database column names for a table (no helper columns)."""
+    if table not in TARGET_SCHEMA:
+        return set()
+    return {col["name"] for col in TARGET_SCHEMA[table]["columns"]}

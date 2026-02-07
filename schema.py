@@ -1,115 +1,171 @@
 """
 Daana-Rx Database Schema Definition
-This serves as the source of truth for column mapping
+This serves as the source of truth for column mapping and LLM prompt generation.
+
+Columns marked with "auto": True are system-managed and should NOT be mapped from CSV data.
+These include primary keys, timestamps, and fields set from auth context.
 """
 
 # Target schema for the daana-rx database
 TARGET_SCHEMA = {
     "clinics": {
         "columns": [
-            {"name": "clinic_id", "type": "UUID", "description": "Primary key for clinic"},
+            {"name": "clinic_id", "type": "UUID", "description": "Primary key for clinic", "auto": True},
             {"name": "name", "type": "VARCHAR(255)", "description": "Clinic name"},
             {"name": "primary_color", "type": "VARCHAR(7)", "description": "Primary brand color (hex)", "nullable": True},
             {"name": "secondary_color", "type": "VARCHAR(7)", "description": "Secondary brand color (hex)", "nullable": True},
             {"name": "logo_url", "type": "TEXT", "description": "URL to clinic logo", "nullable": True},
             {"name": "require_lot_location", "type": "BOOLEAN", "description": "Whether to require L/R location specification for lots", "nullable": True},
-            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp"},
-            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp"}
+            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp", "auto": True},
+            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp", "auto": True}
         ]
     },
     "users": {
         "columns": [
-            {"name": "user_id", "type": "UUID", "description": "Primary key for user"},
+            {"name": "user_id", "type": "UUID", "description": "Primary key for user", "auto": True},
             {"name": "username", "type": "VARCHAR(255)", "description": "Unique username"},
-            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics"},
+            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics", "auto": True},
             {"name": "user_role", "type": "VARCHAR(50)", "description": "User role: superadmin, admin, or employee"},
             {"name": "email", "type": "VARCHAR(255)", "description": "User email address"},
-            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp"},
-            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp"}
+            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp", "auto": True},
+            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp", "auto": True}
         ]
     },
     "locations": {
         "columns": [
-            {"name": "location_id", "type": "UUID", "description": "Primary key for location"},
+            {"name": "location_id", "type": "UUID", "description": "Primary key for location", "auto": True},
             {"name": "name", "type": "VARCHAR(255)", "description": "Location name"},
             {"name": "temp", "type": "VARCHAR(50)", "description": "Storage temperature: fridge or room temp"},
-            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics"},
-            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp"},
-            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp"}
+            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics", "auto": True},
+            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp", "auto": True},
+            {"name": "updated_at", "type": "TIMESTAMPTZ", "description": "Record last update timestamp", "auto": True}
         ]
     },
     "lots": {
         "columns": [
-            {"name": "lot_id", "type": "UUID", "description": "Primary key for lot"},
+            {"name": "lot_id", "type": "UUID", "description": "Primary key for lot", "auto": True},
             {"name": "source", "type": "VARCHAR(255)", "description": "Source/donation origin of the lot", "nullable": True},
-            {"name": "lot_code", "type": "VARCHAR(2)", "description": "2-letter drawer code (e.g., AL, CR)", "nullable": True},
             {"name": "note", "type": "TEXT", "description": "Additional notes about the lot", "nullable": True},
-            {"name": "date_created", "type": "TIMESTAMPTZ", "description": "Lot creation date"},
+            {"name": "date_created", "type": "TIMESTAMPTZ", "description": "Lot creation date", "auto": True},
             {"name": "location_id", "type": "UUID", "description": "Foreign key to locations"},
-            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics"},
+            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics", "auto": True},
             {"name": "max_capacity", "type": "INTEGER", "description": "Maximum capacity of the lot", "nullable": True}
         ]
     },
     "drugs": {
         "columns": [
-            {"name": "drug_id", "type": "UUID", "description": "Primary key for drug"},
+            {"name": "drug_id", "type": "UUID", "description": "Primary key for drug", "auto": True},
             {"name": "medication_name", "type": "VARCHAR(255)", "description": "Brand/trade name of medication"},
             {"name": "generic_name", "type": "VARCHAR(255)", "description": "Generic name of medication", "nullable": True},
             {"name": "strength", "type": "DECIMAL(10, 4)", "description": "Medication strength value"},
             {"name": "strength_unit", "type": "VARCHAR(50)", "description": "Unit of strength (mg, ml, etc.)"},
             {"name": "ndc_id", "type": "VARCHAR(50)", "description": "National Drug Code identifier", "nullable": True},
             {"name": "form", "type": "VARCHAR(100)", "description": "Medication form (tablet, capsule, etc.)"},
-            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp"}
+            {"name": "created_at", "type": "TIMESTAMPTZ", "description": "Record creation timestamp", "auto": True}
         ]
     },
     "units": {
         "columns": [
-            {"name": "unit_id", "type": "UUID", "description": "Primary key for unit"},
+            {"name": "unit_id", "type": "UUID", "description": "Primary key for unit", "auto": True},
             {"name": "total_quantity", "type": "INTEGER", "description": "Total quantity in unit"},
             {"name": "available_quantity", "type": "INTEGER", "description": "Available quantity in unit"},
             {"name": "patient_reference_id", "type": "VARCHAR(255)", "description": "Reference ID for patient", "nullable": True},
-            {"name": "lot_id", "type": "UUID", "description": "Foreign key to lots"},
+            {"name": "lot_id", "type": "UUID", "description": "Foreign key to lots", "auto": True},
             {"name": "expiry_date", "type": "DATE", "description": "Expiration date"},
-            {"name": "date_created", "type": "TIMESTAMPTZ", "description": "Unit creation timestamp"},
-            {"name": "user_id", "type": "UUID", "description": "Foreign key to users"},
-            {"name": "drug_id", "type": "UUID", "description": "Foreign key to drugs"},
+            {"name": "date_created", "type": "TIMESTAMPTZ", "description": "Unit creation timestamp", "auto": True},
+            {"name": "user_id", "type": "UUID", "description": "Foreign key to users", "auto": True},
+            {"name": "drug_id", "type": "UUID", "description": "Foreign key to drugs", "auto": True},
             {"name": "qr_code", "type": "TEXT", "description": "QR code data", "nullable": True},
             {"name": "optional_notes", "type": "TEXT", "description": "Optional notes", "nullable": True},
             {"name": "manufacturer_lot_number", "type": "VARCHAR(255)", "description": "Manufacturer's lot number", "nullable": True},
-            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics"}
+            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics", "auto": True}
         ]
     },
     "transactions": {
         "columns": [
-            {"name": "transaction_id", "type": "UUID", "description": "Primary key for transaction"},
+            {"name": "transaction_id", "type": "UUID", "description": "Primary key for transaction", "auto": True},
             {"name": "timestamp", "type": "TIMESTAMPTZ", "description": "Transaction timestamp"},
             {"name": "type", "type": "VARCHAR(50)", "description": "Transaction type: adjust, check_out, or check_in"},
             {"name": "quantity", "type": "INTEGER", "description": "Quantity involved in transaction"},
             {"name": "unit_id", "type": "UUID", "description": "Foreign key to units"},
             {"name": "patient_name", "type": "VARCHAR(255)", "description": "Patient name"},
             {"name": "patient_reference_id", "type": "VARCHAR(255)", "description": "Patient reference ID"},
-            {"name": "user_id", "type": "UUID", "description": "Foreign key to users"},
+            {"name": "user_id", "type": "UUID", "description": "Foreign key to users", "auto": True},
             {"name": "notes", "type": "TEXT", "description": "Transaction notes"},
-            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics"}
+            {"name": "clinic_id", "type": "UUID", "description": "Foreign key to clinics", "auto": True}
         ]
     }
+}
+
+# Helper columns that aren't in the target table but are accepted in CSV data
+# to help resolve foreign keys during ingestion.
+HELPER_COLUMNS = {
+    "units": [
+        {"name": "medication_name", "resolves": "drug_id", "description": "Drug name used to look up drug_id"},
+        {"name": "generic_name", "resolves": "drug_id", "description": "Generic drug name used to look up drug_id"},
+        {"name": "strength", "resolves": "drug_id", "description": "Drug strength used to look up drug_id"},
+        {"name": "strength_unit", "resolves": "drug_id", "description": "Strength unit used to look up drug_id"},
+        {"name": "form", "resolves": "drug_id", "description": "Drug form used to look up drug_id"},
+        {"name": "ndc_id", "resolves": "drug_id", "description": "NDC code used to look up drug_id"},
+        {"name": "lot_source", "resolves": "lot_id", "description": "Lot source/origin name used to look up lot_id"},
+    ],
 }
 
 
 def get_schema_description() -> str:
     """
-    Generate a formatted schema description for the AI prompt
+    Generate a formatted schema description for the AI prompt.
+    Separates auto-managed columns from user-mappable columns.
     """
-    schema_text = "Target Database Schema:\n\n"
-    
+    schema_text = "TARGET DATABASE SCHEMA\n"
+    schema_text += "=" * 40 + "\n\n"
+
     for table_name, table_info in TARGET_SCHEMA.items():
         schema_text += f"Table: {table_name}\n"
-        schema_text += "Columns:\n"
+
+        mappable = []
+        auto = []
         for col in table_info["columns"]:
-            schema_text += f"  - {col['name']} ({col['type']}): {col['description']}\n"
+            if col.get("auto"):
+                auto.append(col)
+            else:
+                mappable.append(col)
+
+        if mappable:
+            schema_text += "  Mappable columns (map CSV data to these):\n"
+            for col in mappable:
+                nullable = " [optional]" if col.get("nullable") else ""
+                schema_text += f"    - {col['name']} ({col['type']}): {col['description']}{nullable}\n"
+
+        if auto:
+            schema_text += "  Auto-managed columns (DO NOT map CSV data to these):\n"
+            for col in auto:
+                schema_text += f"    - {col['name']}: {col['description']}\n"
+
+        # Add helper columns if any
+        if table_name in HELPER_COLUMNS:
+            schema_text += "  Helper columns (include in mapping to aid FK resolution):\n"
+            for col in HELPER_COLUMNS[table_name]:
+                schema_text += f"    - {col['name']}: {col['description']} (resolves {col['resolves']})\n"
+
         schema_text += "\n"
-    
+
     return schema_text
+
+
+def get_table_column_names(table_name: str) -> set:
+    """
+    Get all valid column names for a specific table,
+    including helper columns accepted during ingestion.
+    """
+    columns = set()
+    if table_name in TARGET_SCHEMA:
+        for col in TARGET_SCHEMA[table_name]["columns"]:
+            columns.add(col["name"])
+    if table_name in HELPER_COLUMNS:
+        for col in HELPER_COLUMNS[table_name]:
+            columns.add(col["name"])
+    return columns
 
 
 def get_all_column_names() -> list:
@@ -119,5 +175,9 @@ def get_all_column_names() -> list:
     columns = []
     for table_info in TARGET_SCHEMA.values():
         for col in table_info["columns"]:
+            columns.append(col["name"])
+    # Include helper columns
+    for helpers in HELPER_COLUMNS.values():
+        for col in helpers:
             columns.append(col["name"])
     return columns
